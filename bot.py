@@ -11,6 +11,7 @@ from telegram.ext import (ApplicationBuilder, CommandHandler, CallbackQueryHandl
                           ContextTypes, MessageHandler, filters)
 
 import config, ui
+import fake_mail
 from accounts import Accounts
 from tcp import TCPProxy, normalize_domains
 from tcp_state import TCPState
@@ -62,7 +63,9 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def cmd_cancel(update, ctx):
     uid = update.effective_user.id
     st = ctx.user_data.setdefault(uid, {})
-    cleared = (st.pop("await_acc_label", False) or st.pop("await_domain", False))
+    cleared = any([st.pop("await_acc_label", False),
+                   st.pop("await_domain", False),
+                   st.pop("await_fakemail", False)])
     wiz = ctx.bot_data.pop(f"wiz_{uid}", None)
     if wiz and wiz.state != "idle":
         wiz.state = "idle"
@@ -76,6 +79,18 @@ async def cmd_cancel(update, ctx):
 async def on_text(update, ctx):
     uid = update.effective_user.id
     st = ctx.user_data.setdefault(uid, {})
+
+    if st.pop("await_fakemail", False):
+        email = update.message.text.strip()
+        if not fake_mail.is_email(email):
+            st["await_fakemail"] = True
+            await update.message.reply_text(ui.FAKEMAIL_BAD, parse_mode="HTML")
+            return
+        st["last_fm"] = email
+        await update.message.reply_text(
+            ui.fakemail_result(fake_mail.make_alias(email)),
+            reply_markup=ui.fakemail_kb(), parse_mode="HTML")
+        return
 
     if st.pop("await_domain", False):
         d = update.message.text.strip()
@@ -465,6 +480,40 @@ async def handle_tcp(update, ctx, q, data):
         return
 
 
+# ════════════════════════ FAKE MAIL ════════════════════════
+FM_BACK = InlineKeyboardMarkup(
+    [[InlineKeyboardButton("🔙 منوی اصلی", callback_data="refresh_menu")]])
+
+
+async def fakemail_start(update, ctx, q):
+    ctx.user_data.setdefault(update.effective_user.id, {})["await_fakemail"] = True
+    try:
+        await q.edit_message_text(ui.FAKEMAIL_PROMPT, reply_markup=FM_BACK,
+                                  parse_mode="HTML")
+    except Exception:
+        pass
+
+
+async def fakemail_again(update, ctx, q):
+    uid = update.effective_user.id
+    st = ctx.user_data.setdefault(uid, {})
+    email = st.get("last_fm")
+    if not email:
+        st["await_fakemail"] = True
+        try:
+            await q.edit_message_text(ui.FAKEMAIL_PROMPT, reply_markup=FM_BACK,
+                                      parse_mode="HTML")
+        except Exception:
+            pass
+        return
+    try:
+        await q.edit_message_text(
+            ui.fakemail_result(fake_mail.make_alias(email)),
+            reply_markup=ui.fakemail_kb(), parse_mode="HTML")
+    except Exception:
+        pass
+
+
 # ════════════════════════ ROUTER ════════════════════════
 async def on_callback(update, ctx):
     q = update.callback_query
@@ -502,6 +551,12 @@ async def on_callback(update, ctx):
         return
     if data == "sec_proto":
         await show_proto(update, ctx, q)
+        return
+    if data == "sec_fakemail":
+        await fakemail_start(update, ctx, q)
+        return
+    if data == "fmagain":
+        await fakemail_again(update, ctx, q)
         return
     if data == "sec_tcp" or data.startswith(("tcp", "tcpsvc:")):
         await handle_tcp(update, ctx, q, data)

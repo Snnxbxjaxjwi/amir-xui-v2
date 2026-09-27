@@ -16,6 +16,10 @@
 ### 🔌 پروتکل‌ها
 - **WS + TLS** — VLESS + WebSocket + TLS (همون مشخصات amir_xu: پورت 8080، مسیر /cdn)
 
+### 📧 Fake Mail
+ایمیل بفرست (`name@example.com`) → آدرس فیک با پیشوند `+` و کلمه/عدد رندم:
+`Babaie640@gmail.com` → `Babaie640+zephyr0427@gmail.com`
+
 ## 📱 دستورات
 | دستور | کار |
 |---|---|

@@ -19,6 +19,7 @@ MENU = InlineKeyboardMarkup([
      InlineKeyboardButton("🚀 دپلوی", callback_data="sec_deploy")],
     [InlineKeyboardButton("🛰 TCP Proxy", callback_data="sec_tcp"),
      InlineKeyboardButton("🔌 پروتکل‌ها", callback_data="sec_proto")],
+    [InlineKeyboardButton("📧 Fake Mail", callback_data="sec_fakemail")],
 ])
 
 def welcome(name="", account=""):
@@ -41,6 +42,7 @@ HELP = (f"{hdr('راهنما 📖')}\n\n"
         "     3️⃣ 🌐 ست دامنه‌ها\n"
         "     4️⃣ 🔗 اتصال نودها\n\n"
         "🔌 <b>پروتکل‌ها</b> — ساخت اینباند ws+tls روی هر پنل\n\n"
+        "📧 <b>Fake Mail</b> — ایمیل بفرست، آدرس فیک با پیشوند + می‌سازم\n\n"
         f"{MID}\n⚠️ بعد از افزودن اکانت، پیام حاوی توکن رو پاک کن 🗑")
 
 # ── accounts ──
@@ -165,3 +167,26 @@ def domains_kb(domains):
                  InlineKeyboardButton("🔄 پیش‌فرض", callback_data="tcpreset")])
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="sec_tcp")])
     return InlineKeyboardMarkup(rows)
+
+# ── fake mail ──
+FAKEMAIL_PROMPT = (
+    f"{hdr('Fake Mail 📧')}\n\n"
+    "ایمیلت رو بفرست تا آدرس فیکش رو بسازم:\n"
+    "<code>Babaie640@gmail.com</code>\n"
+    "    ⬇️\n"
+    "<code>Babaie640+zephyr0427@gmail.com</code>\n\n"
+    f"{MID}\nلغو: /cancel")
+
+FAKEMAIL_BAD = (f"{hdr('ایمیل نامعتبر ⚠️')}\n\n"
+                "فرمت درست: <code>name@example.com</code>\n"
+                "ایمیل دیگه‌ای بفرست:")
+
+def fakemail_result(alias):
+    return (f"{hdr('Fake Mail 📧')}\n\n"
+            f"🎮 <code>{alias}</code>\n\n"
+            f"{MID}\n🔁 دکمه «یکی دیگه» یا هر ایمیل جدیدی بفرست")
+
+def fakemail_kb():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔁 یکی دیگه", callback_data="fmagain")],
+        [InlineKeyboardButton("🔙 منوی اصلی", callback_data="refresh_menu")]])
