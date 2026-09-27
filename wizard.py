@@ -19,7 +19,7 @@ import config
 import requests
 from errors import AppError, PanelError, LimitError
 from railway import Railway
-from xui import Panel, vless_link
+from xui import Panel
 
 log = logging.getLogger(__name__)
 
@@ -120,12 +120,6 @@ class Wizard:
                         entry["url"] = f"https://{dom}"
                 except AppError as e:
                     log.warning("domain %s: %s", p, e)
-
-        await asyncio.gather(*(make(n) for n in config.PANELS))
-        if not self.panels:
-            reason = "; ".join(self.errors[:3]) or "دلیل نامشخص"
-            self.fail(f"هیچ سرویسی ساخته نشد.\n🔍 {reason}")
-            return False
 
         await asyncio.gather(*(make(n) for n in config.PANELS))
         if not self.panels:
@@ -259,6 +253,7 @@ def _make_inbounds(url, name):
             ib = candidate          # reuse existing inbound on our port
             break
     if not ib:
+        remark = f"WS-TLS-{name.lower()}-main"  # matches xui.create_ws_tls_inbound
         r = c.create_ws_tls_inbound(
             uuid=str(uuid.uuid4()), email=f"{name.lower()}-main",
             domain=url.replace("https://", ""),

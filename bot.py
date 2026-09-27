@@ -31,12 +31,6 @@ def token_of(ctx):
     return ctx.user_data.get("_tok") or ""
 
 
-def refresh(ctx):
-    acc, lbl = ACC.get(ctx.user_data_key())
-    ctx.user_data["_tok"] = acc["token"] if acc else ""
-    ctx.user_data["_lbl"] = lbl
-
-
 def origin(update: Update):
     if update.message:
         return update.message
@@ -50,6 +44,8 @@ async def safe_edit(qmsg, text, keyboard=None):
         await qmsg.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
     except Exception:
         pass
+
+say = safe_edit  # TCP progress: guarded edit of the status message
 
 
 
@@ -72,7 +68,7 @@ async def cmd_cancel(update, ctx):
         wiz.state = "idle"
         await update.message.reply_text("🛑 عملیات لغو شد.", parse_mode="HTML")
     elif cleared:
-        await update.message.reply_text(ui.header("لغو شد ❌"), parse_mode="HTML")
+        await update.message.reply_text(ui.hdr("لغو شد ❌"), parse_mode="HTML")
     else:
         await update.message.reply_text("چیزی برای لغو نبود.")
 
@@ -151,10 +147,6 @@ async def do_accounts(update, ctx, q, data):
 
 
 # ════════════════════════ DEPLOY WIZARD ════════════════════════
-def get_wiz(ctx, uid) -> Wizard:
-    return ctx.bot_data.setdefault(f"wiz_{uid}", None)
-
-
 async def start_deploy(update, ctx, q):
     uid = update.effective_user.id
     acc, _ = ACC.get(uid)
@@ -316,8 +308,6 @@ async def start_tcp(update, ctx, q):
                 await q.edit_message_text(ui.hdr("پروژه‌ای نیست 📭"), parse_mode="HTML")
                 return
             proj = projs[0]
-            env_id = await asyncio.to_thread(api.first_env, proj["id"])
-            tcp_api = TCPProxy(tok)
             svcs = []
             # list services via project query
             d = api.gql("""query($id:String!){project(id:$id){
@@ -460,7 +450,7 @@ async def handle_tcp(update, ctx, q, data):
     if data == "tcpadd_hint":
         ctx.user_data.setdefault(uid, {})["await_domain"] = True
         await q.edit_message_text(
-            f"{ui.hdr('افزودن دامنه ➕')}\n\ن اسم دامنه رو بفرست:\n"
+            f"{ui.hdr('افزودن دامنه ➕')}\n\nاسم دامنه رو بفرست:\n"
             "<code>mybox</code> یا <code>mybox.proxy.rlwy.net</code>\n\nلغو: /cancel",
             parse_mode="HTML")
         return

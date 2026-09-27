@@ -3,7 +3,6 @@ TCP Proxy engine — rotate Railway TCP proxies onto "good" domains.
 Sync; translated errors.
 """
 import json
-import socket
 import time
 import urllib.request
 
