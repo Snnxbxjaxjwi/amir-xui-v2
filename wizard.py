@@ -3,8 +3,8 @@ Deploy wizard — explicit 4-stage state machine, persisted per chat.
 
 States:
   idle      → nothing running
-  deploying → stage 1: create project/services + inbounds
-  paused    → stage 2: waiting for user to set regions (button continue)
+  deploying → stage 1: create project/services, auto region, inbounds
+  paused    → stage 2: checkpoint — regions already set by bot (continue)
   domains   → stage 3: setting domains
   nodes     → stage 4: linking nodes
 
@@ -59,6 +59,8 @@ def _rows(panels):
     for p in panels:
         ic = ICONS.get(p.get("status", ""), "⏳")
         out += f"\n{ic} <b>{p['name']}</b>"
+        if p.get("region"):
+            out += f"  🌍 <code>{p['region']}</code>"
         if p.get("url"):
             out += f"\n     🌐 {p['url'].replace('https://', '')}/managepanel/"
     return out
@@ -104,6 +106,27 @@ class Wizard:
                 # service EXISTS now — always track it, whatever happens next
                 entry = {"name": p, "sid": s["id"], "url": "", "status": "WAITING"}
                 self.panels.append(entry)
+                # place the service in its region BEFORE the first deploy,
+                # then verify — some Railway plans accept the write but drop it
+                region = config.PANEL_REGIONS.get(p.upper())
+                if region:
+                    entry["region_want"] = region
+                    try:
+                        await asyncio.to_thread(self.api.set_region,
+                                                s["id"], self.env_id, region)
+                        await asyncio.sleep(2)
+                        got = await asyncio.to_thread(self.api.get_region,
+                                                      s["id"], self.env_id)
+                        if got == region:
+                            entry["region"] = got
+                        else:
+                            self.errors.append(
+                                f"{p}: ریجن {region} ثبت نشد (پلن Railway)")
+                            log.warning("region %s=%s not accepted (readback %r)",
+                                        p, region, got)
+                    except AppError as e:
+                        self.errors.append(f"{p} region {region}: {e.user_msg[:60]}")
+                        log.warning("set_region %s=%s: %s", p, region, e)
                 try:
                     await asyncio.to_thread(self.api.deploy, s["id"], self.env_id)
                 except LimitError as e:

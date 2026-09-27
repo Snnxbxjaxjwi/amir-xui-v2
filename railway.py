@@ -101,6 +101,23 @@ class Railway:
             serviceInstanceDeploy(serviceId:$s,environmentId:$e)}""",
             {"s": sid, "environmentId": env_id})
 
+    def set_region(self, sid, env_id, region):
+        """Place the service in a Railway region (available: sfo, iad, sin, pdx, ams).
+        Call BEFORE the first deploy so the build lands in the right region.
+        NOTE: on some plans Railway returns true but silently drops the write —
+        always confirm with get_region()."""
+        self.gql("""mutation($s:String!,$e:String!,$r:String!){
+            serviceInstanceUpdate(serviceId:$s,environmentId:$e,
+                                  input:{region:$r})}""",
+            {"s": sid, "e": env_id, "r": region})
+
+    def get_region(self, sid, env_id) -> str | None:
+        """Read back the instance region (None = not set / write was ignored)."""
+        d = self.gql("""query($id:String!,$e:String!){
+            serviceInstance(serviceId:$id,environmentId:$e){region}}""",
+            {"id": sid, "e": env_id})
+        return ((d.get("serviceInstance") or {}).get("region"))
+
     def create_domain(self, sid, env_id, port):
         d = self.gql("""mutation($i:ServiceDomainCreateInput!){
             serviceDomainCreate(input:$i){domain}}""",

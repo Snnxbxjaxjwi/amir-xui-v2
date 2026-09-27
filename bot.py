@@ -185,13 +185,25 @@ async def start_deploy(update, ctx, q):
         await safe_edit(q.message, f"{ui.hdr('دپلوی ناموفق ⛔️')}\n\n{wiz.error}")
         return
 
+    def reg_line(p):
+        want, got = p.get("region_want"), p.get("region")
+        if not want:
+            return None
+        if got == want:
+            return f"  🌍 <b>{p['name']}</b> → <code>{got}</code> ✅"
+        return f"  🌍 <b>{p['name']}</b> → <code>{want}</code> ⚠️ ثبت نشد"
+    reg_lines = [x for x in (reg_line(p) for p in wiz.panels) if x]
+    if reg_lines and all("ثبت نشد" in x for x in reg_lines):
+        reg_lines.append("\n⚙️ پلن فعلی Railway تغییر منطقه رو نپذیرفت؛ با پلن پولی اعمال میشه.")
     panel_list = "\n".join(
         f"  🌐 <code>{p['url'].replace('https://', '')}/managepanel/</code>"
         for p in wiz.panels if p.get("url"))
+    body = "\n".join(reg_lines) or "  (برای پنل‌های سفارشی ریجنی تعریف نشده)"
+    body += ("\n" + panel_list) if panel_list else ""
     await q.edit_message_text(
-        f"{ui.hdr('مرحله ۲/۴ — تنظیم ریجن‌ها ⏸')}\n{ui.MID}\n"
-        + ui.STAGE2_PROMPT + panel_list
-        + f"\n\n{ui.BOT}\n👇 بعد از تموم شدن بزن:",
+        f"{ui.hdr('مرحله ۲/۴ — ریجن‌ها 🌍')}\n{ui.MID}\n"
+        + ui.STAGE2_PROMPT + body
+        + f"\n\n{ui.BOT}\n👇 ادامه بده:",
         reply_markup=ui.stage2_kb(), parse_mode="HTML")
 
 
